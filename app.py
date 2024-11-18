@@ -1,16 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for
 import mysql.connector
-import hashlib
 import json
 
 app = Flask(__name__)
 
 # Настройки базы данных
 db_config = {
-    'host': '51.91.215.125',  # Укажите ваш хост
-    'user': 'gs280226',       # Укажите ваш юзер
-    'password': 'b7RApcoKgboJ',  # Укажите ваш пароль
-    'database': 'gs280226'  # Название вашей базы данных
+    'host': '51.91.215.125',  # Хост базы данных
+    'user': 'gs280226',       # Логин к базе данных
+    'password': 'b7RApcoKgboJ',  # Пароль к базе данных
+    'database': 'gs280226'    # Название базы данных
 }
 
 # Подключение к базе данных
@@ -26,8 +25,8 @@ def home():
 # Обработчик формы (обработка доната)
 @app.route('/donate', methods=['POST'])
 def donate():
-    username = request.form['username']
-    amount = request.form['amount']
+    name = request.form['username']  # Никнейм игрока
+    amount = request.form['amount']  # Сумма доната
     
     # Проверяем, что сумма введена корректно
     try:
@@ -40,16 +39,16 @@ def donate():
     cursor = conn.cursor()
 
     # Обновляем баланс игрока
-    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    cursor.execute("SELECT * FROM accounts WHERE name = %s", (name,))
     user = cursor.fetchone()
 
     if user:
         # Если пользователь найден, обновляем баланс
-        new_balance = user[2] + amount
-        cursor.execute("UPDATE users SET money = %s WHERE username = %s", (new_balance, username))
+        new_balance = user[2] + amount  # Проверяем, что правильный индекс для колонки 'money'
+        cursor.execute("UPDATE accounts SET money = %s WHERE name = %s", (new_balance, name))  # Обновляем баланс
     else:
         # Если пользователя нет, добавляем его в таблицу
-        cursor.execute("INSERT INTO users (username, money) VALUES (%s, %s)", (username, amount))
+        cursor.execute("INSERT INTO accounts (name, money) VALUES (%s, %s)", (name, amount))  # Вставляем новые данные
 
     conn.commit()
     cursor.close()
@@ -69,21 +68,21 @@ def webhook():
         return "Invalid signature", 400
 
     # Обработка данных из вебхука (например, обновление баланса)
-    username = data['username']
-    amount = data['amount']
+    name = data['username']  # Имя пользователя
+    amount = data['amount']  # Сумма доната
 
     conn = get_db_connection()
     cursor = conn.cursor()
 
     # Обновляем баланс игрока
-    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    cursor.execute("SELECT * FROM accounts WHERE name = %s", (name,))
     user = cursor.fetchone()
 
     if user:
         new_balance = user[2] + amount
-        cursor.execute("UPDATE users SET money = %s WHERE username = %s", (new_balance, username))
+        cursor.execute("UPDATE accounts SET money = %s WHERE name = %s", (new_balance, name))  # Обновление баланса
     else:
-        cursor.execute("INSERT INTO users (username, money) VALUES (%s, %s)", (username, amount))
+        cursor.execute("INSERT INTO accounts (name, money) VALUES (%s, %s)", (name, amount))  # Вставка нового пользователя
 
     conn.commit()
     cursor.close()
